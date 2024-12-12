@@ -25,7 +25,7 @@ TEXFILE = flags.DEFINE_string(
 
 
 def modify_gnuplot_figures(plot_dir):
-  files = glob(plot_dir + '*.tex')
+  files = glob(os.path.join(plot_dir, '*.tex'))
   for f in files:
     with open(f, 'r') as fo:
       lines = fo.readlines()
