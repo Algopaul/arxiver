@@ -1,11 +1,10 @@
+import os
 import shutil
 import subprocess
-from absl import flags
-from absl import app
-from absl import logging
-import os
 from glob import glob
 from pathlib import Path
+
+from absl import app, flags, logging
 
 DIRNAME = flags.DEFINE_string(
     'dirname',
@@ -38,22 +37,36 @@ def modify_gnuplot_figures(plot_dir):
       fo.writelines(modified_lines)
 
 
+# def rename_fig_files(directory="."):
+#   for filename in os.listdir(directory):
+#     if os.path.isdir(os.path.join(directory, filename)):
+#       continue
+#
+#     file_stem, file_extension = os.path.splitext(filename)
+#
+#     if file_extension == ".tex":
+#       continue
+#
+#     new_filename = f"{file_stem}_fig{file_extension}"
+#     old_path = os.path.join(directory, filename)
+#     new_path = os.path.join(directory, new_filename)
+#
+#     os.rename(old_path, new_path)
+#     print(f"Renamed: {filename} -> {new_filename}")
+
+
 def rename_fig_files(directory="."):
-  for filename in os.listdir(directory):
-    if os.path.isdir(os.path.join(directory, filename)):
+  directory = Path(directory)
+  tex_stems = {p.stem for p in directory.glob("*.tex")}
+
+  for file in directory.iterdir():
+    if file.is_dir() or file.suffix == ".tex":
       continue
-
-    file_stem, file_extension = os.path.splitext(filename)
-
-    if file_extension == ".tex":
-      continue
-
-    new_filename = f"{file_stem}_fig{file_extension}"
-    old_path = os.path.join(directory, filename)
-    new_path = os.path.join(directory, new_filename)
-
-    os.rename(old_path, new_path)
-    print(f"Renamed: {filename} -> {new_filename}")
+    if file.stem in tex_stems:
+      new_name = f"{file.stem}_fig{file.suffix}"
+      new_path = file.with_name(new_name)
+      file.rename(new_path)
+      print(f"Renamed: {file.name} -> {new_name}")
 
 
 def main(_):
@@ -65,8 +78,10 @@ def main(_):
       'cp ' + DIRNAME.value + '/*.bib' + ' ' + DIRNAME.value + '_arXiv/',
       shell=True)
   plt_dir = DIRNAME.value + '_arXiv/' + PLOTDIR.value
-  modify_gnuplot_figures(plt_dir)
-  rename_fig_files(plt_dir)
+  MODIFY_GNUPLOT = True
+  if MODIFY_GNUPLOT:
+    modify_gnuplot_figures(plt_dir)
+    rename_fig_files(plt_dir)
   os.chdir(DIRNAME.value + '_arXiv')
   result = subprocess.run(
       f'latexmk {TEXFILE.value} -outdir=.extraFiles -auxdir=.extraFiles',
@@ -100,8 +115,10 @@ def main(_):
     else:
       if src_file.is_file():
         found = 0
+        kk = str(src_file.name[:20])
+        print(kk)
         for lc in log_content:
-          if src_file.name in lc:
+          if kk in lc:
             found = 1
         if found == 1:
           logging.info('File %s is in use', src_file.name)
